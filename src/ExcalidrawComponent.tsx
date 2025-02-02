@@ -1,29 +1,51 @@
+import { Excalidraw } from '@excalidraw/excalidraw';
+import r2wc from '@r2wc/react-to-web-component';
 import { Properties } from 'hastscript';
 import type { Plugin } from 'unified';
 import { Node } from 'unist';
 import { visit } from 'unist-util-visit';
-import 'iconify-icon';
+
+const ExcalidrawComponentRap = r2wc(Excalidraw, {
+  props: {
+    viewModeEnabled: 'boolean',
+    isCollaborating: 'boolean',
+    initialData: 'json',
+    theme: 'string',
+    onChange: 'function',
+  },
+});
+customElements.define('excalidraw-component', ExcalidrawComponentRap);
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace JSX {
     interface IntrinsicElements {
-      'iconify-icon': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & { icon: string };
+      'excalidraw-component': any;
     }
   }
 }
 
-export const Iconify = (Tag: React.FunctionComponent<any>): React.FunctionComponent<any> => {
+export const ExcalidrawComponent = (Tag: React.FunctionComponent<any>): React.FunctionComponent<any> => {
+
+  const onChange = (data: any) => {
+    console.log(data);
+  };
+
   return ({ children, ...props }) => {
     try {
-      const { size, color, iconify } = JSON.parse(props.title);
-      if (iconify) {
+      const { size, color, excalidraw } = JSON.parse(props.title);
+      if (excalidraw) {
+        console.log(children);
         return (
-          <iconify-icon icon={children} style={{
-            color: color || '#000',
-            fontSize: `${size || 24}px`,
-            verticalAlign: 'bottom',
-          }} />
+          <div style={{ height: '500px' }}>
+            <excalidraw-component
+              viewModeEnabled={true}
+              isCollaborating={false}
+              initialData={children}
+              onChange={onChange}
+              theme="dark"
+            />
+          </div>
         );
       }
       // your code here
@@ -63,23 +85,23 @@ export const remarkPlugin: Plugin = () => {
     // :plugin[xxx]{hello=growi} -> textDirective
     // ::plugin[xxx]{hello=growi} -> leafDirective
     // :::plugin[xxx]{hello=growi} -> containerDirective
-    visit(tree, 'textDirective', (node: Node) => {
+    visit(tree, 'containerDirective', (node: Node) => {
       const n = node as unknown as GrowiNode;
-      if (n.name !== 'icon') return;
+      if (n.name !== 'excalidraw') return;
       const data = n.data || (n.data = {});
+      const value = (n.children[1] as GrowiNode).children.map(ele => ele.value).join('');
       // Render your component
-      const iconName = n.children.map(c => c.value || c.name).join(':');
-      const { size, color } = n.attributes;
-      data.hName = 'a'; // Tag name
+      const { size } = n.attributes;
+      data.hName = 'code'; // Tag name
       data.hChildren = [
         {
           type: 'text',
-          value: iconName,
+          value,
         },
       ];
       // Set properties
       data.hProperties = {
-        title: JSON.stringify({ size, color, iconify: true }),
+        title: JSON.stringify({ size, excalidraw: true }),
       };
     });
   };

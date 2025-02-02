@@ -1,5 +1,5 @@
 import config from './package.json';
-import { Iconify, remarkPlugin } from './src/Iconify';
+import { ExcalidrawComponent, remarkPlugin } from './src/ExcalidrawComponent';
 import { Options, Func, ViewOptions } from './types/utils';
 
 declare const growiFacade : {
@@ -22,8 +22,8 @@ const activate = (): void => {
   optionsGenerators.customGenerateViewOptions = (...args) => {
     const options = originalCustomViewOptions ? originalCustomViewOptions(...args) : optionsGenerators.generateViewOptions(...args);
     // replace
-    const { a } = options.components;
-    options.components.a = Iconify(a); // Wrap the default component
+    const { code } = options.components;
+    options.components.code = ExcalidrawComponent(code); // Wrap the default component
     options.remarkPlugins.push(remarkPlugin as any);
     return options;
   };
@@ -32,8 +32,8 @@ const activate = (): void => {
   const originalGeneratePreviewOptions = optionsGenerators.customGeneratePreviewOptions;
   optionsGenerators.customGeneratePreviewOptions = (...args) => {
     const preview = originalGeneratePreviewOptions ? originalGeneratePreviewOptions(...args) : optionsGenerators.generatePreviewOptions(...args);
-    const { a } = preview.components;
-    preview.components.a = Iconify(a); // Wrap the default component
+    const { code } = preview.components;
+    preview.components.code = ExcalidrawComponent(code); // Wrap the default component
     preview.remarkPlugins.push(remarkPlugin as any);
     return preview;
   };
