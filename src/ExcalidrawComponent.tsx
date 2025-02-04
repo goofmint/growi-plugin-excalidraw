@@ -39,10 +39,10 @@ export const ExcalidrawComponent = (Tag: React.FunctionComponent<any>): React.Fu
         return (
           <div style={{ height: '500px' }}>
             <excalidraw-component
-              viewModeEnabled={true}
-              isCollaborating={false}
-              initialData={children}
-              onChange={onChange}
+              view-mode-enabled={true}
+              is-collaborating={false}
+              initial-data={children}
+              on-change={onChange}
               theme="dark"
             />
           </div>
