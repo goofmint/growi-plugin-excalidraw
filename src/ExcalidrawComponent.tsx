@@ -1,4 +1,5 @@
 import { Excalidraw } from '@excalidraw/excalidraw';
+import { GROWI } from '@goofmint/growi-js';
 import r2wc from '@r2wc/react-to-web-component';
 import { Properties } from 'hastscript';
 import type { Plugin } from 'unified';
@@ -23,27 +24,58 @@ declare global {
       'excalidraw-component': any;
     }
   }
+  interface Window {
+    excalidrawOnChange: (elements: any, appState: any, files: any) => void;
+    excalidrawOnSave: (data: any) => void;
+  }
 }
 
 export const ExcalidrawComponent = (Tag: React.FunctionComponent<any>): React.FunctionComponent<any> => {
-
-  const onChange = (data: any) => {
-    console.log(data);
-  };
-
   return ({ children, ...props }) => {
     try {
-      const { size, color, excalidraw } = JSON.parse(props.title);
+      const {
+        size, excalidraw, theme, id,
+      } = JSON.parse(props.title);
       if (excalidraw) {
-        console.log(children);
+        let timerId: ReturnType<typeof setTimeout>;
+        const editMode = window.location.hash === '#edit';
+        window.excalidrawOnSave = async(data: any) => {
+          if (editMode) return;
+          const growi = new GROWI();
+          if (data.appState && data.appState.collaborators) {
+            data.appState.collaborators = [];
+          }
+          const page = await growi.page({ pageId: window.location.pathname.replace('/', '') });
+          const contents = await page.contents();
+          const regString = `^(.*)\n:::excalidraw\\[${id}\\](.*?)\n(.*?)\n:::(.*)$`;
+          const match = contents.match(new RegExp(regString, 's'));
+          if (!match) return;
+          const newContents = `${match[1]}\n:::excalidraw[${id}]${match[2]}\n${JSON.stringify(data)}\n:::${match[4]}`;
+          page.contents(newContents);
+          try {
+            await page.save();
+          }
+          catch (err) {
+            // console.error(err);
+          }
+        };
+        window.excalidrawOnChange = async(elements: object, appState: any, files: any) => {
+          const data = { elements, appState, files };
+          clearTimeout(timerId);
+          timerId = setTimeout(window.excalidrawOnSave, 2000, data);
+        };
+        const data = children ? JSON.parse(children) : {};
+        if (data.appState && data.appState.collaborators) {
+          data.appState.collaborators = [];
+        }
         return (
-          <div style={{ height: '500px' }}>
+          <div style={{ height: size || '500px' }}>
             <excalidraw-component
-              view-mode-enabled={true}
+              view-mode-enabled={editMode}
               is-collaborating={false}
-              initial-data={children}
-              on-change={onChange}
-              theme="dark"
+              initial-data={JSON.stringify(data)}
+              on-change='excalidrawOnChange'
+              theme={theme || 'light'}
             />
           </div>
         );
@@ -89,9 +121,13 @@ export const remarkPlugin: Plugin = () => {
       const n = node as unknown as GrowiNode;
       if (n.name !== 'excalidraw') return;
       const data = n.data || (n.data = {});
-      const value = (n.children[1] as GrowiNode).children.map(ele => ele.value).join('');
+      const value = n.children[1] ? (n.children[1] as GrowiNode).children.map((ele) => {
+        if (ele.type === 'text') return ele.value;
+        return `:${ele.name}`;
+      }).join('') : '';
+      const id = n.children[0] ? (n.children[0] as GrowiNode).children[0].value : 'excalidraw';
       // Render your component
-      const { size } = n.attributes;
+      const { size, theme } = n.attributes;
       data.hName = 'code'; // Tag name
       data.hChildren = [
         {
@@ -101,19 +137,10 @@ export const remarkPlugin: Plugin = () => {
       ];
       // Set properties
       data.hProperties = {
-        title: JSON.stringify({ size, excalidraw: true }),
+        title: JSON.stringify({
+          size, theme, excalidraw: true, id,
+        }),
       };
-    });
-  };
-};
-
-export const rehypePlugin: Plugin = () => {
-  return (tree: Node) => {
-    // node type is 'element' or 'text' (2nd argument)
-    visit(tree, 'text', (node: Node) => {
-      const n = node as unknown as GrowiNode;
-      const { value } = n;
-      n.value = `${value} 😄`;
     });
   };
 };
