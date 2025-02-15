@@ -1,6 +1,8 @@
 # GROIW Excalidraw Plugin
 
-This is a plugin for GROWI that allows you to embed Excalidraw diagrams.
+This is a plugin for GROWI that allows you to embed [Excalidraw](https://excalidraw.com/) diagrams.
+
+![](./image.jpg)
 
 ## Usage
 
